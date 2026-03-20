@@ -1,6 +1,7 @@
 ================================================================
   OllamaVoice - Local AI Voice Assistant
   README & Complete Guide
+  Version 1.1
 ================================================================
 
 OllamaVoice is a fully local, private AI voice assistant that
@@ -8,203 +9,287 @@ runs entirely on your own PC. Your voice, your data, your hardware.
 No cloud. No subscriptions. No internet required after first setup.
 
 ================================================================
-  FOR END USERS - INSTALLING OLLAMAVOICE
+  WHAT'S NEW IN VERSION 1.1
 ================================================================
 
-  STEP 1 - Install Requirements
-  --------------------------------
-  Before running the installer, you need:
+  - Model selector dialog on every launch — choose your AI model
+    before the session starts
+  - Support for 5 AI models: Llama 3, Mistral 22B, Qwen 2.5 32B,
+    DeepSeek R1 32B, Gemma 2 27B
+  - Docker Desktop auto-starts if not already running
+  - 100% GPU mode — all model layers forced onto GPU, no CPU offload
+    using OLLAMA_MAIN_GPU, OLLAMA_KV_CACHE_TYPE=q8_0, and
+    OLLAMA_FLASH_ATTENTION for maximum speed
+  - All CPU cores available at runtime for fast model loading
+  - Startup screen with 5 live status checks before mic unlocks
+  - LLM warmup step — mic stays locked until model is fully ready
+  - Local Whisper transcription (faster-whisper) — fully offline
+  - CPU-throttled model downloads during install (12.5% CPU cap
+    via .wslconfig) to prevent overheating
+  - Single PowerShell progress window per model download with
+    verification step after each download
+  - Windows installer (Inno Setup) with model selection checkboxes,
+    desktop shortcut option, and startup option
+  - System tray icon showing active model name
+  - Config endpoint — browser reads selected model from server
 
-  A) DOCKER DESKTOP
-     Download: https://www.docker.com/products/docker-desktop/
-     - Run the installer
-     - Launch Docker Desktop after install
-     - Wait until the bottom-left shows "Engine running"
-     - Keep Docker Desktop running whenever you use OllamaVoice
+================================================================
+  SUPPORTED AI MODELS
+================================================================
 
-  B) PYTHON 3.10 OR HIGHER
-     Download: https://www.python.org/downloads/
-     - Run the installer
-     - !! CHECK "Add Python to PATH" on the first screen !!
-     - OR install from Microsoft Store (search "Python 3")
+  Model              Size     Best for
+  ─────────────────────────────────────────────────────────────
+  Llama 3            ~4.7 GB  Fast, general purpose (default)
+  Mistral 22B        ~13 GB   Balanced performance
+  Qwen 2.5 32B       ~19 GB   Excellent reasoning
+  DeepSeek R1 32B    ~19 GB   Coding and complex reasoning
+  Gemma 2 27B        ~16 GB   Google open model
 
-  STEP 2 - Run the Installer
-  --------------------------------
-  Double-click:  OllamaVoice_Setup.exe
+  NOTE: DeepSeek R1 uses a "thinking" architecture. It generates
+  an internal reasoning chain before answering — expect 30-60
+  seconds before the first token appears. This is normal.
 
-  The installer will:
-    - Check that Docker and Python are installed
-    - Show a warning if anything is missing (you can still proceed
-      and install the missing items before first launch)
-    - Let you choose an install directory (default is fine)
-    - Ask if you want a Desktop shortcut
-    - Ask if you want OllamaVoice to launch on Windows startup
-    - Install Python packages automatically (faster-whisper, etc.)
-    - Offer to launch OllamaVoice immediately when done
+  RECOMMENDED: RTX 5090 (32GB VRAM) can run any model up to
+  32B at full GPU with no CPU offload.
 
-  STEP 3 - First Launch
-  --------------------------------
-  The very first time OllamaVoice launches:
+================================================================
+  REQUIREMENTS
+================================================================
 
-    1. It pulls the Ollama Docker image (~1GB)
-       Only happens once. Skipped if Ollama is already installed.
+  - Windows 10 or 11
+  - Docker Desktop  https://www.docker.com/products/docker-desktop/
+    Launch and wait for "Engine running" before use
+  - Python 3.10+    https://www.python.org/downloads/
+    CHECK "Add Python to PATH" during install
+  - NVIDIA GPU recommended for best performance
 
-    2. It downloads the Whisper speech model (~150MB)
-       Only happens once. Saved permanently to your PC.
+================================================================
+  INSTALLATION
+================================================================
 
-    3. It loads the llama3 AI model into GPU memory
-       Takes 30-60 seconds. Faster on subsequent launches.
+  STEP 1 - Install Docker Desktop and Python (if not installed)
+    Make sure Docker Desktop is running before continuing.
 
-  You will see a startup screen with 5 status checks:
-    o Connecting to Ollama
-    o Connecting to Whisper transcription server
-    o Checking llama3 model
-    o Warming up LLM (waits until the model is fully ready)
-    o Requesting microphone access
+  STEP 2 - Run the installer
+    Double-click: OllamaVoice_Setup.exe
+    Run as administrator if prompted.
 
-  Everything is locked until all 5 checks pass green.
-  Your browser opens automatically when the system is ready.
+    The installer will:
+      - Check Docker and Python are installed
+      - Install Python packages (faster-whisper, pystray, pillow)
+      - Create and start the Ollama Docker container
+      - Show model selection checkboxes
+      - Download selected models one at a time
+      - Ask if you want a Desktop shortcut (optional)
+      - Ask if you want OllamaVoice on Windows startup (optional)
+      - Offer to launch immediately when done
+
+  STEP 3 - Model downloads
+    Each model opens a PowerShell progress window showing:
+      - Download progress with size, speed and ETA
+      - CPU limited to 12.5% to prevent overheating
+      - Verification confirms model installed correctly
+      - Window closes automatically, next model starts
+      - Full CPU restored after all downloads complete
+
+================================================================
+  FIRST LAUNCH
+================================================================
+
+  1. Docker Desktop auto-starts if not already running
+     OllamaVoice launches Docker Desktop automatically and waits
+     up to 60 seconds for it to be ready.
+
+  2. Model selector dialog appears
+     Choose which installed model to use for this session.
+     Your choice is saved. The tray icon shows the active model.
+
+  3. Browser startup screen shows 5 status checks:
+     o Connecting to Ollama
+     o Connecting to Whisper transcription server
+     o Checking selected model is installed
+     o Warming up LLM (waits until model is fully loaded)
+     o Requesting microphone access
+     Everything stays locked until all 5 pass green.
+
+  4. Browser opens automatically when ready.
 
 ================================================================
   USING OLLAMAVOICE
 ================================================================
 
   VOICE INPUT
-    Click the microphone button (bottom left circle)
-    Speak your message clearly
-    Click the microphone button again to stop recording
-    Your speech is transcribed locally and sent to the AI
+    Click the mic button (bottom left)
+    Speak your message
+    Click mic again to stop
+    Speech is transcribed locally then sent to the LLM
 
   TEXT INPUT
-    Type in the text box at the bottom of the screen
-    Press Enter or click SEND
+    Type in the text box and press Enter or click SEND
 
   SYSTEM TRAY ICON
-    OllamaVoice shows an icon in your taskbar (bottom right)
-    Right-click it to:
-      Open Voice UI  - reopens the browser window
-      Quit           - shuts down everything cleanly
+    Right-click the tray icon (bottom right taskbar) to:
+      Open Voice UI  — reopens the browser
+      Quit           — shuts everything down cleanly
+
+  SWITCHING MODELS
+    Quit from the tray icon and relaunch.
+    The model selector appears on every launch.
 
   CONFIG PANEL
-    Click [ config ] in the top-right of the browser to change:
-      Ollama Host       - default: http://localhost:11434
-      Chat Model        - default: llama3
-      Transcription URL - default: http://localhost:8080/transcribe
+    Click [ config ] in the browser top-right to change:
+      Ollama Host, Chat Model, Transcription URL
+
+================================================================
+  PERFORMANCE NOTES
+================================================================
+
+  GPU USAGE
+    OllamaVoice forces 100% GPU inference using:
+      OLLAMA_NUM_GPU=999          all layers on GPU
+      OLLAMA_GPU_LAYERS=999       all transformer layers on GPU
+      OLLAMA_MAIN_GPU=0           targets GPU 0 explicitly
+      OLLAMA_FLASH_ATTENTION=1    reduces VRAM usage
+      OLLAMA_KV_CACHE_TYPE=q8_0   halves KV cache VRAM footprint
+
+    Verify 100% GPU is being used:
+      docker --context default exec ollama ollama ps
+
+  CPU USAGE
+    Model downloads (install only) : 12.5% CPU cap
+    Whisper transcription          : all CPU cores
+    LLM model loading              : all CPU cores
+    LLM token generation           : GPU handles this
 
 ================================================================
   TROUBLESHOOTING
 ================================================================
 
-  "Ollama unreachable" on startup screen
-    - Open Docker Desktop and wait for "Engine running"
-    - Restart Docker Desktop if it looks stuck
-    - Try relaunching OllamaVoice after Docker is ready
+  "Ollama unreachable"
+    Open Docker Desktop, wait for "Engine running", relaunch.
 
   "Whisper server not running"
-    - Close OllamaVoice completely (tray icon > Quit)
-    - Relaunch OllamaVoice_Setup.exe or the Desktop shortcut
-    - Make sure Python is installed and on PATH:
-        Open PowerShell and type: python --version
+    Quit from tray and relaunch. Check Python is on PATH.
 
   "Model not found"
-    - Click [ config ] in the browser
-    - Make sure Chat Model is set to: llama3
-    - The model name must exactly match what Ollama has installed
+    Open [ config ] and confirm Chat Model name is correct.
+    Check installed models:
+      docker --context default exec ollama ollama list
 
   "Microphone access denied"
-    - Click the lock/settings icon in your browser address bar
-    - Set Microphone permission to Allow
-    - Refresh the page (F5)
+    Click the lock icon in your browser address bar.
+    Set Microphone to Allow. Refresh the page (F5).
 
-  "Generating..." with no response / stuck
-    - The LLM may still be loading into GPU memory
-    - The startup screen now waits for the LLM before unlocking
-    - If stuck more than 3 minutes, close and relaunch
+  Model shows CPU% instead of 100% GPU
+    Delete .ollama_setup_done from C:\Program Files\OllamaVoice\
+    Relaunch to recreate container with GPU settings.
+    Large context windows consume VRAM for KV cache which can
+    push layers to CPU if VRAM is full.
 
-  Browser window doesn't open
-    - Open your browser manually and go to:
-        http://localhost:8080/ollama-voice-chat.html
+  Docker won't stop
+    Force stop:  docker --context default kill ollama
+    Nuclear:     wsl --shutdown  (stops all WSL2 instantly)
 
-  App won't start / crashes immediately
-    - Make sure Docker Desktop is running first
-    - Make sure Python is installed:
-        Open PowerShell, type: python --version
-    - Make sure packages are installed:
-        Open PowerShell, type: pip show faster-whisper
+  Browser doesn't open
+    Navigate manually: http://localhost:8080/ollama-voice-chat.html
+
+================================================================
+  USEFUL COMMANDS
+================================================================
+
+  List installed models:
+    docker --context default exec ollama ollama list
+
+  Check running model and GPU usage:
+    docker --context default exec ollama ollama ps
+
+  Remove a model:
+    docker --context default exec ollama ollama rm <modelname>
+
+  Pull a model manually:
+    docker --context default exec ollama ollama pull <modelname>
+
+  Live container stats:
+    docker --context default stats ollama
+
+  Force stop container:
+    docker --context default kill ollama
+
+  Full WSL2 shutdown:
+    wsl --shutdown
 
 ================================================================
   UNINSTALLING
 ================================================================
 
-  Option 1: Windows Settings
-    Settings > Apps > OllamaVoice > Uninstall
+  Option 1: Settings > Apps > OllamaVoice > Uninstall
+  Option 2: Start > OllamaVoice > Uninstall OllamaVoice
 
-  Option 2: Start Menu
-    Start > OllamaVoice > Uninstall OllamaVoice
-
-  The uninstaller removes:
-    - All installed app files
-    - Desktop shortcut (if created)
-    - Start Menu entries
-    - Startup entry (if added)
-
-  The uninstaller does NOT remove:
-    - Docker Desktop
-    - Python
-    - Ollama Docker image
-    - Any downloaded AI models (llama3, Whisper)
-    - Python packages (faster-whisper, pystray, pillow)
+  Removes: app files, shortcuts, Start Menu, startup entry
+  Does NOT remove: Docker, Python, Ollama, AI models, packages
 
 ================================================================
   FOR DEVELOPERS - BUILDING THE INSTALLER
 ================================================================
 
-  To build OllamaVoice_Setup.exe from source:
+  SOURCE FILES (all must be in same folder):
+    launcher.py             main app entry point
+    ollama_server.py        local Whisper + HTTP server
+    ollama-voice-chat.html  browser UI
+    OllamaVoice.iss         Inno Setup installer script
+    create_installer.bat    builds OllamaVoice_Setup.exe
+    create_icon.py          generates Ollama-style .ico
+    pull_model.ps1          per-model download with CPU throttle
+    README.txt              this file
 
-  REQUIREMENTS:
-    - Windows 10 or 11
-    - Python 3.10+ with pip on PATH
-    - Internet connection (to download Inno Setup ~5MB)
-    - All source files in the same folder:
-        launcher.py
-        ollama_server.py
-        ollama-voice-chat.html
-        OllamaVoice.iss
-        run.bat
-        uninstall_helper.bat
-        create_installer.bat
-        README.txt
+  BUILD STEPS:
+    1. Extract source zip anywhere on your PC
+    2. Right-click create_installer.bat > Run as administrator
+    3. It automatically:
+         - Installs pyinstaller, pillow, faster-whisper, pystray
+         - Generates ollama_icon.ico
+         - Compiles launcher.py into OllamaVoice.exe
+         - Downloads Inno Setup if needed
+         - Compiles OllamaVoice_Setup.exe
+    4. Share OllamaVoice_Setup.exe — users only need this file
 
-  STEPS:
-    1. Extract this zip anywhere on your PC
-    2. Double-click create_installer.bat
-    3. It will:
-         - Download and install Inno Setup automatically
-         - Install required Python packages
-         - Compile everything into OllamaVoice_Setup.exe
-    4. Share OllamaVoice_Setup.exe with anyone
-       (they only need the single .exe file)
+  ARCHITECTURE OVERVIEW:
+    launcher.py
+      Detects/starts Docker Desktop
+      Creates Ollama container with 100% GPU env vars
+      Shows tkinter model selector dialog
+      Saves model choice to config.json
+      Starts HTTP server (/transcribe, /config, static files)
+      Loads faster-whisper with all CPU cores
+      Launches selected model with all CPU cores + 100% GPU
+      Opens browser, runs system tray icon
 
-  NOTE: create_installer.bat can be run from any folder.
-  No need to copy anything to your Desktop.
+    pull_model.ps1 (installer only)
+      Backs up .wslconfig
+      Writes CPU-limited .wslconfig (processors=N at 12.5%)
+      Restarts WSL2 to apply limit
+      Runs ollama pull directly (native progress bar)
+      Verifies install via ollama list
+      Restores .wslconfig, restarts WSL2 to full CPU
+      Exits so installer moves to next model
 
 ================================================================
   PRIVACY & SECURITY
 ================================================================
 
-  Everything runs locally on your PC:
-    - Voice transcription: OpenAI Whisper (Python, CPU)
-    - AI model: llama3 via Ollama (Docker container)
-    - Web UI: Python HTTP server (localhost only)
+  Everything runs locally:
+    Voice transcription  faster-whisper on CPU (local)
+    AI inference         Ollama in Docker (local GPU)
+    Web UI               Python HTTP server (localhost only)
 
-  No data is sent to any external server.
-  No account or API key required.
-  No internet needed after the initial model downloads.
-
-  The only external resource used is Google Fonts in the browser
-  UI (cosmetic fonts only - the app works without them).
+  No data sent externally. No account or API key needed.
+  No internet after initial model downloads.
+  Google Fonts loaded for UI typography only (cosmetic).
 
 ================================================================
-  Version: 1.0
-  Powered by: Python, faster-whisper, Ollama, Docker, llama3
+  Version    : 1.1
+  Platform   : Windows 10/11
+  Powered by : Python, faster-whisper, Ollama, Docker
+  Models     : Llama 3, Mistral 22B, Qwen 2.5 32B,
+               DeepSeek R1 32B, Gemma 2 27B
 ================================================================
