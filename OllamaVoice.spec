@@ -5,7 +5,7 @@ a = Analysis(
     ['launcher.py'],
     pathex=[],
     binaries=[],
-    datas=[('ollama-voice-chat.html', '.'), ('ollama_server.py', '.')],
+    datas=[('ollama-voice-chat.html', '.'), ('ollama_server.py', '.'), ('pull_model.ps1', '.')],
     hiddenimports=['faster_whisper', 'pystray', 'PIL', 'PIL.Image', 'PIL.ImageDraw'],
     hookspath=[],
     hooksconfig={},

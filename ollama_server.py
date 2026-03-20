@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Local Whisper transcription server + static file server.
-Compatible with Python 3.13+ (no cgi module required).
+OllamaVoice local server — standalone version.
+Serves the web UI and handles Whisper transcription.
+Compatible with Python 3.13+
 """
 
 import os
@@ -12,53 +13,59 @@ import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
-SERVE_DIR = Path(__file__).parent.resolve()
-PORT = 8080
-MODEL_SIZE = "base"  # tiny | base | small | medium | large
+SERVE_DIR    = Path(__file__).parent.resolve()
+CONFIG_FILE  = SERVE_DIR / "config.json"
+PORT         = 8080
+WHISPER_SIZE = "base"
+OLLAMA_HOST  = "http://localhost:11434"
 
-print(f"[server] Loading Whisper model '{MODEL_SIZE}'...")
-print(f"[server] NOTE: First run downloads ~150MB model - please wait...")
+print(f"[server] Loading Whisper model '{WHISPER_SIZE}'...")
 try:
     from faster_whisper import WhisperModel
-    whisper_model = WhisperModel(MODEL_SIZE, device="cpu", compute_type="int8")
-    print(f"[server] Whisper '{MODEL_SIZE}' ready.")
+    _cpu_threads = os.cpu_count() or 16
+    print(f"[server] Using {_cpu_threads} CPU threads (all cores)")
+    whisper_model = WhisperModel(WHISPER_SIZE, device="cpu", compute_type="int8",
+                                 cpu_threads=_cpu_threads, num_workers=1)
+    print(f"[server] Whisper ready.")
 except Exception as e:
     print(f"[server] ERROR loading Whisper: {e}")
     whisper_model = None
 
 
+def load_config():
+    if CONFIG_FILE.exists():
+        try:
+            return json.loads(CONFIG_FILE.read_text())
+        except Exception:
+            pass
+    return {"model": "llama3"}
+
+
 def parse_multipart(data: bytes, boundary: str) -> dict:
-    """Parse multipart form data without the cgi module."""
     parts = {}
     boundary_bytes = f"--{boundary}".encode()
-    segments = data.split(boundary_bytes)
-    for segment in segments:
+    for segment in data.split(boundary_bytes):
         if b"Content-Disposition" not in segment:
             continue
-        # Split headers from body
         try:
             header_section, body = segment.split(b"\r\n\r\n", 1)
         except ValueError:
             continue
-        # Remove trailing boundary marker
         if body.endswith(b"\r\n"):
             body = body[:-2]
         headers_raw = header_section.decode(errors="replace")
-        # Extract field name
         name_match = re.search(r'name="([^"]+)"', headers_raw)
         if not name_match:
             continue
         name = name_match.group(1)
-        # Extract filename if present
         filename_match = re.search(r'filename="([^"]+)"', headers_raw)
-        filename = filename_match.group(1) if filename_match else None
-        parts[name] = {"data": body, "filename": filename}
+        parts[name] = {"data": body, "filename": filename_match.group(1) if filename_match else None}
     return parts
 
 
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, format, *args):
-        print(f"[server] {self.address_string()} - {format % args}")
+    def log_message(self, fmt, *args):
+        print(f"[server] {self.address_string()} - {fmt % args}")
 
     def send_cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -66,61 +73,57 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_cors()
-        self.end_headers()
+        self.send_response(200); self.send_cors(); self.end_headers()
 
     def do_GET(self):
         path = self.path.split("?")[0].lstrip("/")
-        if path == "":
-            path = "ollama-voice-chat.html"
 
-        file_path = SERVE_DIR / path
-        if not file_path.exists() or not file_path.is_file():
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"Not found")
+        # Config endpoint
+        if path == "config":
+            cfg  = load_config()
+            body = json.dumps({
+                "model":       cfg.get("model", "llama3"),
+                "ollama_host": OLLAMA_HOST,
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_cors(); self.end_headers(); self.wfile.write(body)
             return
 
-        ext = file_path.suffix.lower()
-        mime = {
-            ".html": "text/html",
-            ".js":   "application/javascript",
-            ".css":  "text/css",
-            ".png":  "image/png",
-            ".ico":  "image/x-icon",
-        }.get(ext, "application/octet-stream")
+        if path == "":
+            path = "ollama-voice-chat.html"
+        file_path = SERVE_DIR / path
+        if not file_path.exists() or not file_path.is_file():
+            self.send_response(404); self.end_headers()
+            self.wfile.write(b"Not found"); return
 
+        ext  = file_path.suffix.lower()
+        mime = {".html":"text/html",".js":"application/javascript",
+                ".css":"text/css",".png":"image/png",".ico":"image/x-icon"
+                }.get(ext,"application/octet-stream")
         data = file_path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(data)))
-        self.send_cors()
-        self.end_headers()
-        self.wfile.write(data)
+        self.send_cors(); self.end_headers(); self.wfile.write(data)
 
     def do_POST(self):
         if self.path != "/transcribe":
-            self.send_response(404)
-            self.end_headers()
-            return
-
+            self.send_response(404); self.end_headers(); return
         if whisper_model is None:
-            self._json_error("Whisper model not loaded")
-            return
+            self._json_error("Whisper model not loaded"); return
 
-        content_type = self.headers.get("Content-Type", "")
+        content_type   = self.headers.get("Content-Type", "")
         content_length = int(self.headers.get("Content-Length", 0))
-        raw_body = self.rfile.read(content_length)
-
-        audio_data = None
-        filename = "recording.webm"
+        raw_body       = self.rfile.read(content_length)
+        audio_data     = None
+        filename       = "recording.webm"
 
         if "multipart/form-data" in content_type:
-            boundary_match = re.search(r"boundary=([^\s;]+)", content_type)
-            if boundary_match:
-                boundary = boundary_match.group(1).strip('"')
-                parts = parse_multipart(raw_body, boundary)
+            bm = re.search(r"boundary=([^\s;]+)", content_type)
+            if bm:
+                parts = parse_multipart(raw_body, bm.group(1).strip('"'))
                 if "file" in parts:
                     audio_data = parts["file"]["data"]
                     filename   = parts["file"]["filename"] or filename
@@ -128,52 +131,41 @@ class Handler(BaseHTTPRequestHandler):
             audio_data = raw_body
 
         if not audio_data:
-            self._json_error("No audio data received")
-            return
+            self._json_error("No audio data received"); return
 
         suffix = Path(filename).suffix or ".webm"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(audio_data)
-            tmp_path = tmp.name
+            tmp.write(audio_data); tmp_path = tmp.name
 
         try:
-            segments, info = whisper_model.transcribe(tmp_path, beam_size=5)
-            transcript = " ".join(seg.text for seg in segments).strip()
-            print(f"[whisper] Transcript: {transcript!r}")
+            segs, _ = whisper_model.transcribe(tmp_path, beam_size=5)
+            transcript = " ".join(s.text for s in segs).strip()
+            print(f"[whisper] {transcript!r}")
             self._json_ok({"text": transcript})
         except Exception as e:
-            print(f"[whisper] Error: {e}")
-            self._json_error(str(e))
+            print(f"[whisper] Error: {e}"); self._json_error(str(e))
         finally:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
+            try: os.unlink(tmp_path)
+            except: pass
 
     def _json_ok(self, data):
         body = json.dumps(data).encode()
         self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_cors()
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_header("Content-Type","application/json")
+        self.send_header("Content-Length",str(len(body)))
+        self.send_cors(); self.end_headers(); self.wfile.write(body)
 
     def _json_error(self, msg):
-        body = json.dumps({"error": msg}).encode()
+        body = json.dumps({"error":msg}).encode()
         self.send_response(500)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_cors()
-        self.end_headers()
-        self.wfile.write(body)
+        self.send_header("Content-Type","application/json")
+        self.send_header("Content-Length",str(len(body)))
+        self.send_cors(); self.end_headers(); self.wfile.write(body)
 
 
 if __name__ == "__main__":
     server = HTTPServer(("0.0.0.0", PORT), Handler)
     print(f"[server] Serving on http://localhost:{PORT}")
-    print(f"[server] Open: http://localhost:{PORT}/ollama-voice-chat.html")
-    print(f"[server] Press Ctrl+C to stop")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
