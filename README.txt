@@ -1,7 +1,7 @@
 ================================================================
   OllamaVoice - Local AI Voice Assistant
   README & Complete Guide
-  Version 1.1
+  Version 1.2
 ================================================================
 
 OllamaVoice is a fully local, private AI voice assistant that
@@ -9,29 +9,35 @@ runs entirely on your own PC. Your voice, your data, your hardware.
 No cloud. No subscriptions. No internet required after first setup.
 
 ================================================================
-  WHAT'S NEW IN VERSION 1.1
+  WHAT'S NEW IN VERSION 1.2
 ================================================================
 
-  - Model selector dialog on every launch — choose your AI model
-    before the session starts
+  - Jarvis voice (Kokoro TTS) now working via Python 3.11 subprocess
+  - Speed control: 0.2x to 5.0x in the header, saved between sessions
+  - Stop button: instantly stops Jarvis mid-sentence
+  - JARVIS ON/OFF toggle button in the header
+  - Config and setup data moved to AppData (no permissions issues)
+  - Install path corrected to 64-bit Program Files
+  - Build cache auto-cleared on every create_installer.bat run
+  - Auto-copies updated exe to install dir after each build
+
+================================================================
+  WHAT'S IN VERSION 1.1
+================================================================
+
+  - Model selector dialog on every launch
   - Support for 5 AI models: Llama 3, Mistral 22B, Qwen 2.5 32B,
     DeepSeek R1 32B, Gemma 2 27B
-  - Docker Desktop auto-starts if not already running
-  - 100% GPU mode — all model layers forced onto GPU, no CPU offload
-    using OLLAMA_MAIN_GPU, OLLAMA_KV_CACHE_TYPE=q8_0, and
-    OLLAMA_FLASH_ATTENTION for maximum speed
-  - All CPU cores available at runtime for fast model loading
-  - Startup screen with 5 live status checks before mic unlocks
-  - LLM warmup step — mic stays locked until model is fully ready
+  - Docker Desktop auto-starts if not running
+  - 100% GPU mode for all model inference
+  - All CPU cores for fast model loading
+  - Startup screen with 6 live status checks before mic unlocks
+  - LLM warmup step before mic activates
   - Local Whisper transcription (faster-whisper) — fully offline
-  - CPU-throttled model downloads during install (12.5% CPU cap
-    via .wslconfig) to prevent overheating
-  - Single PowerShell progress window per model download with
-    verification step after each download
-  - Windows installer (Inno Setup) with model selection checkboxes,
-    desktop shortcut option, and startup option
+  - CPU-throttled model downloads (12.5% via .wslconfig)
+  - Single PowerShell progress window per model download
+  - Windows installer with model selection checkboxes
   - System tray icon showing active model name
-  - Config endpoint — browser reads selected model from server
 
 ================================================================
   SUPPORTED AI MODELS
@@ -45,74 +51,73 @@ No cloud. No subscriptions. No internet required after first setup.
   DeepSeek R1 32B    ~19 GB   Coding and complex reasoning
   Gemma 2 27B        ~16 GB   Google open model
 
-  NOTE: DeepSeek R1 uses a "thinking" architecture. It generates
-  an internal reasoning chain before answering — expect 30-60
+  NOTE: DeepSeek R1 uses a "thinking" architecture — it generates
+  an internal chain of thought before answering. Expect 30-60
   seconds before the first token appears. This is normal.
 
-  RECOMMENDED: RTX 5090 (32GB VRAM) can run any model up to
-  32B at full GPU with no CPU offload.
+  RECOMMENDED: RTX 5090 (32GB VRAM) runs any model up to 32B
+  at 100% GPU with no CPU offload.
 
 ================================================================
   REQUIREMENTS
 ================================================================
 
-  - Windows 10 or 11
+  - Windows 10 or 11 (64-bit)
   - Docker Desktop  https://www.docker.com/products/docker-desktop/
     Launch and wait for "Engine running" before use
-  - Python 3.10+    https://www.python.org/downloads/
+  - Python 3.11     https://www.python.org/downloads/
     CHECK "Add Python to PATH" during install
+    (Python 3.11 specifically required for Kokoro TTS voice)
   - NVIDIA GPU recommended for best performance
 
 ================================================================
   INSTALLATION
 ================================================================
 
-  STEP 1 - Install Docker Desktop and Python (if not installed)
-    Make sure Docker Desktop is running before continuing.
+  STEP 1 - Install Docker Desktop and Python 3.11
+    Make sure Docker Desktop shows "Engine running" before
+    continuing. Python 3.11 is required for Jarvis voice.
 
   STEP 2 - Run the installer
     Double-click: OllamaVoice_Setup.exe
     Run as administrator if prompted.
 
     The installer will:
-      - Check Docker and Python are installed
-      - Install Python packages (faster-whisper, pystray, pillow)
+      - Install Python 3.11 silently if not found
+      - Install Python packages (Kokoro TTS, faster-whisper, etc.)
       - Create and start the Ollama Docker container
       - Show model selection checkboxes
-      - Download selected models one at a time
-      - Ask if you want a Desktop shortcut (optional)
-      - Ask if you want OllamaVoice on Windows startup (optional)
-      - Offer to launch immediately when done
+      - Download selected models one at a time with progress window
+      - Optionally create a Desktop shortcut
+      - Optionally launch on Windows startup
 
   STEP 3 - Model downloads
-    Each model opens a PowerShell progress window showing:
-      - Download progress with size, speed and ETA
-      - CPU limited to 12.5% to prevent overheating
-      - Verification confirms model installed correctly
-      - Window closes automatically, next model starts
-      - Full CPU restored after all downloads complete
+    Each selected model opens a PowerShell progress window:
+      - CPU limited to 12.5% via .wslconfig (PC stays usable)
+      - Progress bar shows size, speed, and ETA
+      - Verification step confirms each model installed correctly
+      - Window closes automatically, next model begins
+      - Full CPU restored when all downloads complete
 
 ================================================================
   FIRST LAUNCH
 ================================================================
 
-  1. Docker Desktop auto-starts if not already running
-     OllamaVoice launches Docker Desktop automatically and waits
-     up to 60 seconds for it to be ready.
+  1. Docker Desktop auto-starts if not running
 
-  2. Model selector dialog appears
-     Choose which installed model to use for this session.
+  2. Model selector dialog — choose your AI model for this session
      Your choice is saved. The tray icon shows the active model.
 
-  3. Browser startup screen shows 5 status checks:
-     o Connecting to Ollama
-     o Connecting to Whisper transcription server
-     o Checking selected model is installed
-     o Warming up LLM (waits until model is fully loaded)
-     o Requesting microphone access
-     Everything stays locked until all 5 pass green.
+  3. Startup screen — 6 status checks:
+     o Config loaded
+     o Ollama connected
+     o Whisper server ready
+     o Jarvis voice (Kokoro TTS) loading
+     o Model found
+     o LLM warming up
+     Everything stays locked until all pass green.
 
-  4. Browser opens automatically when ready.
+  4. Browser opens automatically when ready
 
 ================================================================
   USING OLLAMAVOICE
@@ -122,44 +127,62 @@ No cloud. No subscriptions. No internet required after first setup.
     Click the mic button (bottom left)
     Speak your message
     Click mic again to stop
-    Speech is transcribed locally then sent to the LLM
+    Speech transcribed locally via Whisper → sent to LLM
 
   TEXT INPUT
-    Type in the text box and press Enter or click SEND
+    Type in the text box → press Enter or click SEND
 
-  SYSTEM TRAY ICON
-    Right-click the tray icon (bottom right taskbar) to:
-      Open Voice UI  — reopens the browser
-      Quit           — shuts everything down cleanly
+  JARVIS VOICE OUTPUT
+    Every LLM response is read aloud by Kokoro TTS (bm_george)
+    Deep British male voice — closest local match to Jarvis
+
+  SPEED CONTROL  (top right, next to JARVIS ON/OFF)
+    Range: 0.2x (very slow) to 5.0x (very fast)
+    Increments: 0.2x up to 2.0x, then 2.5x, 3.0x, 4.0x, 5.0x
+    Setting is saved between sessions
+
+  STOP BUTTON  (appears while Jarvis is speaking)
+    Click [|| STOP] to instantly silence Jarvis mid-sentence
+    Clears the entire speech queue
+
+  JARVIS ON/OFF TOGGLE
+    Click the JARVIS ON/OFF button to toggle voice on or off
+    Does not stop current speech — use STOP for that
 
   SWITCHING MODELS
-    Quit from the tray icon and relaunch.
-    The model selector appears on every launch.
+    Quit from the tray icon and relaunch
+    The model selector appears on every launch
 
-  CONFIG PANEL
-    Click [ config ] in the browser top-right to change:
-      Ollama Host, Chat Model, Transcription URL
+  SYSTEM TRAY ICON  (bottom right taskbar)
+    Right-click to:
+      Open Voice UI  — reopens the browser
+      Quit           — shuts everything down cleanly
 
 ================================================================
   PERFORMANCE NOTES
 ================================================================
 
   GPU USAGE
-    OllamaVoice forces 100% GPU inference using:
+    OllamaVoice forces 100% GPU inference:
       OLLAMA_NUM_GPU=999          all layers on GPU
       OLLAMA_GPU_LAYERS=999       all transformer layers on GPU
       OLLAMA_MAIN_GPU=0           targets GPU 0 explicitly
       OLLAMA_FLASH_ATTENTION=1    reduces VRAM usage
       OLLAMA_KV_CACHE_TYPE=q8_0   halves KV cache VRAM footprint
 
-    Verify 100% GPU is being used:
+    Verify GPU usage:
       docker --context default exec ollama ollama ps
 
-  CPU USAGE
-    Model downloads (install only) : 12.5% CPU cap
-    Whisper transcription          : all CPU cores
-    LLM model loading              : all CPU cores
-    LLM token generation           : GPU handles this
+  JARVIS VOICE (KOKORO TTS)
+    First speech call: ~10-30 seconds (model loads into memory)
+    Subsequent calls: ~2-5 seconds depending on text length
+    Kokoro model cached at:
+      C:\Users\<you>\.cache\huggingface\hub\models--hexgrad--Kokoro-82M\
+    Runs entirely offline after first load
+
+  WHISPER
+    Speech recognition: faster-whisper "base" model (~150MB)
+    Fully offline, runs on CPU, ~1-3 seconds per recording
 
 ================================================================
   TROUBLESHOOTING
@@ -169,29 +192,54 @@ No cloud. No subscriptions. No internet required after first setup.
     Open Docker Desktop, wait for "Engine running", relaunch.
 
   "Whisper server not running"
-    Quit from tray and relaunch. Check Python is on PATH.
+    Quit from tray and relaunch.
+
+  Jarvis voice not working / JARVIS OFF shown
+    Check that Python 3.11 is installed:
+      C:\Users\<you>\AppData\Local\Programs\Python\Python311\python.exe
+    Check debug log at: %TEMP%\ollamavoice_debug.log
+
+  First Jarvis response is slow (~30 seconds)
+    Normal — Kokoro loads its model on first use then caches it.
+    Subsequent responses are much faster.
 
   "Model not found"
-    Open [ config ] and confirm Chat Model name is correct.
+    Open [ config ] and confirm Chat Model name matches exactly.
     Check installed models:
       docker --context default exec ollama ollama list
 
   "Microphone access denied"
-    Click the lock icon in your browser address bar.
-    Set Microphone to Allow. Refresh the page (F5).
+    Click lock icon in browser address bar → Set Microphone to Allow
 
   Model shows CPU% instead of 100% GPU
-    Delete .ollama_setup_done from C:\Program Files\OllamaVoice\
+    Delete %APPDATA%\OllamaVoice\.ollama_setup_done
     Relaunch to recreate container with GPU settings.
-    Large context windows consume VRAM for KV cache which can
-    push layers to CPU if VRAM is full.
 
   Docker won't stop
     Force stop:  docker --context default kill ollama
-    Nuclear:     wsl --shutdown  (stops all WSL2 instantly)
+    Nuclear:     wsl --shutdown
 
   Browser doesn't open
-    Navigate manually: http://localhost:8080/ollama-voice-chat.html
+    Navigate to: http://localhost:8080/ollama-voice-chat.html
+
+================================================================
+  FILE LOCATIONS
+================================================================
+
+  Install directory (read-only, exe and static files):
+    C:\Program Files\OllamaVoice\
+
+  Config and setup flags (writable):
+    C:\Users\<you>\AppData\Roaming\OllamaVoice\config.json
+
+  Debug log:
+    C:\Users\<you>\AppData\Local\Temp\ollamavoice_debug.log
+
+  Kokoro voice model cache:
+    C:\Users\<you>\.cache\huggingface\hub\
+
+  Whisper model cache:
+    C:\Users\<you>\.cache\huggingface\hub\
 
 ================================================================
   USEFUL COMMANDS
@@ -222,19 +270,21 @@ No cloud. No subscriptions. No internet required after first setup.
   UNINSTALLING
 ================================================================
 
-  Option 1: Settings > Apps > OllamaVoice > Uninstall
-  Option 2: Start > OllamaVoice > Uninstall OllamaVoice
+  Settings > Apps > OllamaVoice > Uninstall
 
   Removes: app files, shortcuts, Start Menu, startup entry
   Does NOT remove: Docker, Python, Ollama, AI models, packages
+
+  To also remove Kokoro voice cache:
+    Delete: C:\Users\<you>\.cache\huggingface\hub\
 
 ================================================================
   FOR DEVELOPERS - BUILDING THE INSTALLER
 ================================================================
 
-  SOURCE FILES (all must be in same folder):
+  SOURCE FILES (all in same folder):
     launcher.py             main app entry point
-    ollama_server.py        local Whisper + HTTP server
+    ollama_server.py        fallback Whisper + HTTP server
     ollama-voice-chat.html  browser UI
     OllamaVoice.iss         Inno Setup installer script
     create_installer.bat    builds OllamaVoice_Setup.exe
@@ -243,53 +293,46 @@ No cloud. No subscriptions. No internet required after first setup.
     README.txt              this file
 
   BUILD STEPS:
-    1. Extract source zip anywhere on your PC
-    2. Right-click create_installer.bat > Run as administrator
+    1. Extract source zip to a fresh folder
+    2. Run create_installer.bat as a NORMAL USER (not admin)
+       PyInstaller does not work correctly as admin
     3. It automatically:
-         - Installs pyinstaller, pillow, faster-whisper, pystray
+         - Installs/verifies Python 3.11
+         - Installs kokoro, faster-whisper, pystray, pyinstaller into 3.11
+         - Clears old build cache (forces full recompile every time)
          - Generates ollama_icon.ico
-         - Compiles launcher.py into OllamaVoice.exe
-         - Downloads Inno Setup if needed
+         - Compiles OllamaVoice.exe with Python 3.11
+         - Downloads Inno Setup if not installed
          - Compiles OllamaVoice_Setup.exe
-    4. Share OllamaVoice_Setup.exe — users only need this file
+         - Copies updated files to existing install if present
+    4. Run OllamaVoice_Setup.exe as admin to install
 
-  ARCHITECTURE OVERVIEW:
-    launcher.py
-      Detects/starts Docker Desktop
-      Creates Ollama container with 100% GPU env vars
-      Shows tkinter model selector dialog
-      Saves model choice to config.json
-      Starts HTTP server (/transcribe, /config, static files)
-      Loads faster-whisper with all CPU cores
-      Launches selected model with all CPU cores + 100% GPU
-      Opens browser, runs system tray icon
-
-    pull_model.ps1 (installer only)
-      Backs up .wslconfig
-      Writes CPU-limited .wslconfig (processors=N at 12.5%)
-      Restarts WSL2 to apply limit
-      Runs ollama pull directly (native progress bar)
-      Verifies install via ollama list
-      Restores .wslconfig, restarts WSL2 to full CPU
-      Exits so installer moves to next model
+  KEY ARCHITECTURE NOTES:
+    - Kokoro TTS runs via Python 3.11 subprocess (NOT bundled in exe)
+      This avoids PyInstaller frozen environment incompatibilities
+    - config.json lives in %APPDATA%\OllamaVoice\ (writable)
+    - Static files (HTML, server, scripts) live in Program Files (read-only)
+    - Speed setting persisted in browser localStorage
+    - All TTS events logged to %TEMP%\ollamavoice_debug.log
 
 ================================================================
   PRIVACY & SECURITY
 ================================================================
 
   Everything runs locally:
-    Voice transcription  faster-whisper on CPU (local)
-    AI inference         Ollama in Docker (local GPU)
+    Voice transcription  faster-whisper on CPU
+    AI inference         Ollama in Docker on GPU
+    TTS voice            Kokoro on Python 3.11
     Web UI               Python HTTP server (localhost only)
 
   No data sent externally. No account or API key needed.
-  No internet after initial model downloads.
-  Google Fonts loaded for UI typography only (cosmetic).
+  No internet after initial model and voice model downloads.
 
 ================================================================
-  Version    : 1.1
-  Platform   : Windows 10/11
-  Powered by : Python, faster-whisper, Ollama, Docker
+  Version    : 1.2
+  Platform   : Windows 10/11 (64-bit)
+  Powered by : Python 3.11, Kokoro TTS, faster-whisper, Ollama, Docker
+  Voice      : Kokoro bm_george (British male)
   Models     : Llama 3, Mistral 22B, Qwen 2.5 32B,
                DeepSeek R1 32B, Gemma 2 27B
 ================================================================

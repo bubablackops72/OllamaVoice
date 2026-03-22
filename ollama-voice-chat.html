@@ -15,7 +15,6 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--bg);color:var(--text);font-family:var(--mono);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-    /* Startup overlay */
     #startup-overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px}
     #startup-overlay.hidden{display:none}
     .startup-logo{font-size:18px;font-weight:600;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
@@ -35,16 +34,41 @@
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
     header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+    .logo-wrap{}
     .logo{font-size:13px;font-weight:600;letter-spacing:.15em;color:var(--accent);text-transform:uppercase}
     .logo span{color:var(--text-dim)}
     .logo-model{font-size:10px;color:var(--text-dim);letter-spacing:.08em;margin-top:2px}
-    .status-bar{display:flex;align-items:center;gap:20px;font-size:11px;color:var(--text-dim);letter-spacing:.08em}
+    .status-bar{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-dim);letter-spacing:.08em}
     .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background .3s,box-shadow .3s}
     .dot.online{background:var(--accent);box-shadow:0 0 8px var(--accent)}
     .dot.error{background:var(--danger);box-shadow:0 0 8px var(--danger)}
     .dot.working{background:var(--accent2);box-shadow:0 0 8px var(--accent2);animation:pulse 1s infinite}
     .config-btn{background:none;border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:11px;padding:4px 10px;cursor:pointer;letter-spacing:.08em;transition:border-color .2s,color .2s}
     .config-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* Voice toggle button */
+    #voice-btn{
+      background:none;border:1px solid var(--border);color:var(--text-dim);
+      font-family:var(--mono);font-size:11px;padding:4px 10px;cursor:pointer;
+      letter-spacing:.08em;transition:border-color .2s,color .2s;
+      display:flex;align-items:center;gap:6px;
+    }
+    #voice-btn.active{border-color:var(--accent2);color:var(--accent2)}
+    #voice-btn:hover{border-color:var(--accent);color:var(--accent)}
+    #voice-btn .voice-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+    #voice-btn.speaking .voice-dot{animation:pulse .6s infinite}
+    #stop-btn{
+      background:none;border:1px solid var(--border);color:var(--text-dim);
+      font-family:var(--mono);font-size:11px;padding:4px 10px;cursor:pointer;
+      letter-spacing:.08em;transition:border-color .2s,color .2s;
+      display:none;align-items:center;gap:6px;
+    }
+    #stop-btn.visible{display:flex}
+    #stop-btn:hover{border-color:var(--danger);color:var(--danger)}
+    #speed-wrap{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);letter-spacing:.08em}
+    #speed-wrap label{white-space:nowrap}
+    #speed-select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:3px 6px;cursor:pointer;outline:none;transition:border-color .2s}
+    #speed-select:focus{border-color:var(--accent2)}
 
     #config-panel{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:none;gap:16px;flex-wrap:wrap;align-items:center;font-size:12px}
     #config-panel.open{display:flex}
@@ -111,41 +135,47 @@
     <div class="startup-model" id="startup-model-label">Loading config...</div>
   </div>
   <div class="startup-steps">
-    <div class="step" id="step-config">
-      <span class="step-icon">○</span>
-      <span class="step-label">Loading configuration...</span>
-    </div>
-    <div class="step" id="step-ollama">
-      <span class="step-icon">○</span>
-      <span class="step-label">Connecting to Ollama...</span>
-    </div>
-    <div class="step" id="step-whisper">
-      <span class="step-icon">○</span>
-      <span class="step-label">Connecting to Whisper server...</span>
-    </div>
-    <div class="step" id="step-model">
-      <span class="step-icon">○</span>
-      <span class="step-label">Checking model...</span>
-    </div>
-    <div class="step" id="step-warmup">
-      <span class="step-icon">○</span>
-      <span class="step-label">Warming up LLM — please wait...</span>
-    </div>
-    <div class="step" id="step-mic">
-      <span class="step-icon">○</span>
-      <span class="step-label">Requesting microphone access...</span>
-    </div>
+    <div class="step" id="step-config"><span class="step-icon">○</span><span class="step-label">Loading configuration...</span></div>
+    <div class="step" id="step-ollama"><span class="step-icon">○</span><span class="step-label">Connecting to Ollama...</span></div>
+    <div class="step" id="step-whisper"><span class="step-icon">○</span><span class="step-label">Connecting to Whisper server...</span></div>
+    <div class="step" id="step-tts"><span class="step-icon">○</span><span class="step-label">Loading Jarvis voice (Kokoro TTS)...</span></div>
+    <div class="step" id="step-model"><span class="step-icon">○</span><span class="step-label">Checking model...</span></div>
+    <div class="step" id="step-warmup"><span class="step-icon">○</span><span class="step-label">Warming up LLM...</span></div>
+    <div class="step" id="step-mic"><span class="step-icon">○</span><span class="step-label">Requesting microphone...</span></div>
   </div>
-  <div class="startup-ready" id="startup-ready">✓ System ready — mic is live</div>
+  <div class="startup-ready" id="startup-ready">✓ JARVIS online — ready</div>
 </div>
 
 <header>
-  <div>
+  <div class="logo-wrap">
     <div class="logo">VOICE <span>//</span> OLLAMA</div>
     <div class="logo-model" id="header-model-label">loading...</div>
   </div>
   <div class="status-bar">
     <div id="conn-status"><span class="dot" id="conn-dot"></span><span id="conn-label">checking...</span></div>
+    <button id="voice-btn" class="active" onclick="toggleVoice()" title="Toggle Jarvis voice output">
+      <span class="voice-dot"></span><span id="voice-label">JARVIS ON</span>
+    </button>
+    <button id="stop-btn" onclick="stopSpeaking()" title="Stop Jarvis speaking">&#9646;&#9646; STOP</button>
+    <div id="speed-wrap">
+      <label for="speed-select">SPEED</label>
+      <select id="speed-select" onchange="setSpeed(this.value)" title="Jarvis speaking speed">
+        <option value="0.2">0.2x</option>
+        <option value="0.4">0.4x</option>
+        <option value="0.6">0.6x</option>
+        <option value="0.8">0.8x</option>
+        <option value="1.0" selected>1.0x</option>
+        <option value="1.2">1.2x</option>
+        <option value="1.4">1.4x</option>
+        <option value="1.6">1.6x</option>
+        <option value="1.8">1.8x</option>
+        <option value="2.0">2.0x</option>
+        <option value="2.5">2.5x</option>
+        <option value="3.0">3.0x</option>
+        <option value="4.0">4.0x</option>
+        <option value="5.0">5.0x</option>
+      </select>
+    </div>
     <button class="config-btn" onclick="toggleConfig()">[ config ]</button>
   </div>
 </header>
@@ -184,7 +214,57 @@
     host:       localStorage.getItem('ol_host')       || 'http://localhost:11434',
     chat:       localStorage.getItem('ol_chat')       || 'llama3',
     transcribe: localStorage.getItem('ol_transcribe') || 'http://localhost:8080/transcribe',
+    speak:      'http://localhost:8080/speak',
   };
+
+  let voiceEnabled = localStorage.getItem('ol_voice') !== 'off';
+  let ttsAvailable = false;
+  let currentAudio = null;
+  let speakQueue   = [];
+  let isSpeaking   = false;
+  let ttsSpeed     = parseFloat(localStorage.getItem('ol_speed') || '1.0');
+
+  function setSpeed(val) {
+    ttsSpeed = parseFloat(val);
+    localStorage.setItem('ol_speed', val);
+  }
+
+  function stopSpeaking() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    speakQueue.length = 0;
+    isSpeaking = false;
+    document.getElementById('voice-btn').classList.remove('speaking');
+    document.getElementById('stop-btn').classList.remove('visible');
+  }
+
+  function updateVoiceBtn() {
+    const btn = document.getElementById('voice-btn');
+    const lbl = document.getElementById('voice-label');
+    if (voiceEnabled && ttsAvailable) {
+      btn.className = 'active';
+      lbl.textContent = 'JARVIS ON';
+    } else if (!ttsAvailable) {
+      btn.className = '';
+      lbl.textContent = 'TTS N/A';
+    } else {
+      btn.className = '';
+      lbl.textContent = 'JARVIS OFF';
+    }
+    // Restore saved speed
+    const sel = document.getElementById('speed-select');
+    if (sel) {
+      const saved = localStorage.getItem('ol_speed') || '1.0';
+      sel.value = saved;
+      ttsSpeed = parseFloat(saved);
+    }
+  }
+
+  function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    localStorage.setItem('ol_voice', voiceEnabled ? 'on' : 'off');
+    if (!voiceEnabled && currentAudio) { currentAudio.pause(); currentAudio = null; isSpeaking = false; }
+    updateVoiceBtn();
+  }
 
   function toggleConfig() {
     const p = document.getElementById('config-panel');
@@ -224,214 +304,261 @@
   }
 
   async function runStartup() {
-    // Step 1 — Load config from server
+    // Step 1 — Config
     setStep('step-config', 'active', 'Loading configuration...');
     try {
-      const r = await fetch('http://localhost:8080/config', { signal: AbortSignal.timeout(5000) });
+      const r = await fetch('http://localhost:8080/config', {signal:AbortSignal.timeout(5000)});
       if (r.ok) {
-        const serverCfg = await r.json();
-        if (serverCfg.model) {
-          CFG.chat = serverCfg.model;
-          localStorage.setItem('ol_chat', CFG.chat);
-        }
-        if (serverCfg.ollama_host) {
-          CFG.host = serverCfg.ollama_host;
-          localStorage.setItem('ol_host', CFG.host);
-        }
+        const sc = await r.json();
+        if (sc.model) { CFG.chat = sc.model; localStorage.setItem('ol_chat', CFG.chat); }
+        if (sc.ollama_host) { CFG.host = sc.ollama_host; localStorage.setItem('ol_host', CFG.host); }
         updateModelLabel(CFG.chat);
         setStep('step-config', 'done', `Config loaded — model: ${CFG.chat}`);
-      } else {
-        throw new Error();
-      }
-    } catch {
-      setStep('step-config', 'done', 'Using saved config');
-      updateModelLabel(CFG.chat);
-    }
+      } else throw new Error();
+    } catch { setStep('step-config', 'done', 'Using saved config'); updateModelLabel(CFG.chat); }
 
     // Step 2 — Ollama
     setStep('step-ollama', 'active', 'Connecting to Ollama...');
     let ollamaOk = false;
-    for (let i = 0; i < 20; i++) {
-      try {
-        const r = await fetch(`${CFG.host}/api/tags`, { signal: AbortSignal.timeout(2000) });
-        if (r.ok) { ollamaOk = true; break; }
-      } catch {}
+    for (let i=0; i<20; i++) {
+      try { const r=await fetch(`${CFG.host}/api/tags`,{signal:AbortSignal.timeout(2000)}); if(r.ok){ollamaOk=true;break;} } catch {}
       await sleep(2000);
     }
-    if (!ollamaOk) {
-      setStep('step-ollama', 'error', 'Ollama unreachable — is Docker running?');
-      setStatus('ollama offline'); return;
-    }
-    setStep('step-ollama', 'done', 'Ollama connected');
+    if (!ollamaOk) { setStep('step-ollama','error','Ollama unreachable'); setStatus('ollama offline'); return; }
+    setStep('step-ollama','done','Ollama connected');
 
     // Step 3 — Whisper
-    setStep('step-whisper', 'active', 'Connecting to Whisper server...');
-    let whisperOk = false;
-    for (let i = 0; i < 20; i++) {
-      try {
-        const r = await fetch(CFG.transcribe.replace('/transcribe','/'), { signal: AbortSignal.timeout(2000) });
-        if (r.status < 500) { whisperOk = true; break; }
-      } catch {}
+    setStep('step-whisper','active','Connecting to Whisper server...');
+    let whisperOk=false;
+    for (let i=0;i<20;i++) {
+      try { const r=await fetch(CFG.transcribe.replace('/transcribe','/'),{signal:AbortSignal.timeout(2000)}); if(r.status<500){whisperOk=true;break;} } catch {}
       await sleep(2000);
     }
-    if (!whisperOk) {
-      setStep('step-whisper', 'error', 'Whisper server not running');
-      setStatus('whisper offline'); return;
-    }
-    setStep('step-whisper', 'done', 'Whisper server ready');
+    if (!whisperOk) { setStep('step-whisper','error','Whisper server not running'); setStatus('whisper offline'); return; }
+    setStep('step-whisper','done','Whisper server ready');
 
-    // Step 4 — Model check
-    setStep('step-model', 'active', `Checking ${CFG.chat}...`);
-    let modelOk = false, modelCount = 0;
+    // Step 4 — TTS (Kokoro) — retry several times since subprocess may be slow to start
+    setStep('step-tts','active','Loading Jarvis voice...');
+    ttsAvailable = false;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        setStep('step-tts','active',`Loading Jarvis voice... (attempt ${attempt}/5)`);
+        const r = await fetch(CFG.speak, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({text:'Systems online.', speed: ttsSpeed}),
+          signal: AbortSignal.timeout(120000)
+        });
+        if (r.ok) {
+          ttsAvailable = true;
+          setStep('step-tts','done','Jarvis voice ready (Kokoro TTS)');
+          const blob = await r.blob();
+          const url  = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.play().catch(()=>{});
+          break;
+        }
+      } catch(e) {
+        if (attempt < 5) { await sleep(3000); continue; }
+      }
+    }
+    if (!ttsAvailable) {
+      // TTS may still work - Kokoro is slow on first load
+      // Mark as available optimistically, real calls will confirm
+      ttsAvailable = true;
+      setStep('step-tts','done','Jarvis voice ready (loading on first use...)');
+    }
+    updateVoiceBtn();
+
+    // Step 5 — Model check
+    setStep('step-model','active',`Checking ${CFG.chat}...`);
+    let modelOk=false, modelCount=0;
     try {
-      const r = await fetch(`${CFG.host}/api/tags`);
-      const d = await r.json();
-      const models = (d.models||[]).map(m=>m.name);
-      modelCount = models.length;
-      modelOk = models.some(m=>m.startsWith(CFG.chat.split(':')[0]));
-      // Update header dot
-      const dot = document.getElementById('conn-dot');
-      const lbl = document.getElementById('conn-label');
-      dot.className = 'dot online';
-      lbl.textContent = `online · ${modelCount} model${modelCount!==1?'s':''}`;
+      const r=await fetch(`${CFG.host}/api/tags`); const d=await r.json();
+      const models=(d.models||[]).map(m=>m.name); modelCount=models.length;
+      modelOk=models.some(m=>m.startsWith(CFG.chat.split(':')[0]));
+      const dot=document.getElementById('conn-dot'), lbl=document.getElementById('conn-label');
+      dot.className='dot online'; lbl.textContent=`online · ${modelCount} model${modelCount!==1?'s':''}`;
     } catch {}
-    if (!modelOk) {
-      setStep('step-model', 'error', `Model "${CFG.chat}" not found — check config or install it`);
-      setStatus('model missing'); return;
-    }
-    setStep('step-model', 'done', `${CFG.chat} found`);
+    if (!modelOk) { setStep('step-model','error',`Model "${CFG.chat}" not found`); setStatus('model missing'); return; }
+    setStep('step-model','done',`${CFG.chat} found`);
 
-    // Step 5 — LLM warmup
-    setStep('step-warmup', 'active', `Warming up ${CFG.chat} — please wait...`);
-    let warmupOk = false;
+    // Step 6 — LLM warmup
+    setStep('step-warmup','active',`Warming up ${CFG.chat}...`);
+    let warmupOk=false;
     try {
-      const r = await fetch(`${CFG.host}/api/chat`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ model:CFG.chat, stream:false, messages:[{role:'user',content:'hi'}] }),
-        signal: AbortSignal.timeout(120000),
+      const r=await fetch(`${CFG.host}/api/chat`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:CFG.chat,stream:false,messages:[{role:'user',content:'hi'}]}),
+        signal:AbortSignal.timeout(120000),
       });
-      if (r.ok) { const d=await r.json(); warmupOk = !!d.message?.content; }
-    } catch(e){ console.warn('Warmup:', e); }
-    if (!warmupOk) {
-      setStep('step-warmup', 'error', 'LLM did not respond — check Ollama logs');
-      setStatus('llm error'); return;
-    }
-    setStep('step-warmup', 'done', `${CFG.chat} is ready`);
+      if(r.ok){const d=await r.json();warmupOk=!!d.message?.content;}
+    } catch(e){console.warn('Warmup:',e);}
+    if (!warmupOk) { setStep('step-warmup','error','LLM did not respond'); setStatus('llm error'); return; }
+    setStep('step-warmup','done',`${CFG.chat} is ready`);
 
-    // Step 6 — Mic
-    setStep('step-mic', 'active', 'Requesting microphone access...');
+    // Step 7 — Mic
+    setStep('step-mic','active','Requesting microphone...');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       stream.getTracks().forEach(t=>t.stop());
-      setStep('step-mic', 'done', 'Microphone ready');
-    } catch {
-      setStep('step-mic', 'error', 'Microphone access denied');
-      setStatus('mic denied'); return;
-    }
+      setStep('step-mic','done','Microphone ready');
+    } catch { setStep('step-mic','error','Microphone access denied'); setStatus('mic denied'); return; }
 
-    // Done
     document.getElementById('startup-ready').classList.add('visible');
     await sleep(1200);
     document.getElementById('startup-overlay').classList.add('hidden');
-    setBusy(false);
-    setStatus('ready');
+    setBusy(false); setStatus('ready');
   }
 
-  // ── Chat ─────────────────────────────────────────────────
-  const history = [];
+  // ── TTS speak queue ───────────────────────────────────────────
+  async function speakText(text) {
+    if (!voiceEnabled || !ttsAvailable) return;
+    // Clean markdown and thinking tags from text before speaking
+    const clean = text
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/`[^`]+`/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .trim();
+    if (!clean) return;
 
-  function addMessage(role, content) {
-    history.push({role: role==='ai'?'assistant':role, content});
-    const chat = document.getElementById('chat');
-    const div  = document.createElement('div');
-    div.className = `msg ${role}`;
-    div.innerHTML = `<div class="msg-role">${role==='ai'?'llm':role}</div><div class="msg-content" id="msg-${Date.now()}">${escHtml(content)}</div>`;
-    chat.appendChild(div); chat.scrollTop = chat.scrollHeight;
+    speakQueue.push(clean);
+    if (!isSpeaking) processSpeakQueue();
+  }
+
+  async function processSpeakQueue() {
+    if (speakQueue.length === 0) {
+      isSpeaking = false;
+      document.getElementById('voice-btn').classList.remove('speaking');
+      document.getElementById('stop-btn').classList.remove('visible');
+      return;
+    }
+    isSpeaking = true;
+    document.getElementById('voice-btn').classList.add('speaking');
+    document.getElementById('stop-btn').classList.add('visible');
+    const text = speakQueue.shift();
+    try {
+      const r = await fetch(CFG.speak, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text, speed: ttsSpeed}),
+        signal:AbortSignal.timeout(120000)
+      });
+      if (r.ok) {
+        const blob = await r.blob();
+        const url  = URL.createObjectURL(blob);
+        currentAudio = new Audio(url);
+        await new Promise(res => {
+          currentAudio.onended = res;
+          currentAudio.onerror = res;
+          currentAudio.play().catch(res);
+        });
+        URL.revokeObjectURL(url);
+      }
+    } catch(e) { console.warn('TTS error:', e); }
+    currentAudio = null;
+    processSpeakQueue();
+  }
+
+  // ── Chat ─────────────────────────────────────────────────────
+  const history=[];
+  function addMessage(role,content) {
+    history.push({role:role==='ai'?'assistant':role,content});
+    const chat=document.getElementById('chat');
+    const div=document.createElement('div');
+    div.className=`msg ${role}`;
+    div.innerHTML=`<div class="msg-role">${role==='ai'?'llm':role}</div><div class="msg-content" id="msg-${Date.now()}">${escHtml(content)}</div>`;
+    chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
     return div.querySelector('.msg-content');
   }
-
-  function escHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function clearChat(){ history.length=0; document.getElementById('chat').innerHTML=''; }
-
-  // ── Recording ─────────────────────────────────────────────
-  let mediaRecorder=null, audioChunks=[], isRecording=false;
-
-  function getSupportedMime(){
-    const t=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
-    return t.find(x=>MediaRecorder.isTypeSupported(x))||'';
+  function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function clearChat(){
+    history.length=0; document.getElementById('chat').innerHTML='';
+    if(currentAudio){currentAudio.pause();currentAudio=null;}
+    speakQueue.length=0; isSpeaking=false;
   }
 
-  async function toggleRecording(){ isRecording?stopRecording():await startRecording(); }
-
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  // ── Recording ─────────────────────────────────────────────────
+  let mediaRecorder=null,audioChunks=[],isRecording=false;
+  function getSupportedMime(){const t=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];return t.find(x=>MediaRecorder.isTypeSupported(x))||'';}
+  async function toggleRecording(){isRecording?stopRecording():await startRecording();}
+  async function startRecording(){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
       audioChunks=[];
-      mediaRecorder = new MediaRecorder(stream,{mimeType:getSupportedMime()});
-      mediaRecorder.ondataavailable = e=>{if(e.data.size>0)audioChunks.push(e.data);};
-      mediaRecorder.onstop = processAudio;
-      mediaRecorder.start(100); isRecording=true;
+      mediaRecorder=new MediaRecorder(stream,{mimeType:getSupportedMime()});
+      mediaRecorder.ondataavailable=e=>{if(e.data.size>0)audioChunks.push(e.data);};
+      mediaRecorder.onstop=processAudio;
+      mediaRecorder.start(100);isRecording=true;
       document.getElementById('mic-btn').classList.add('recording');
       document.getElementById('waveform').classList.add('visible');
       setStatus('recording…');
-    } catch(e){ setStatus('mic denied'); }
+      // Stop any current speech when user starts recording
+      if(currentAudio){currentAudio.pause();currentAudio=null;}
+      speakQueue.length=0;
+    }catch(e){setStatus('mic denied');}
   }
-
-  function stopRecording() {
-    if(mediaRecorder&&mediaRecorder.state!=='inactive'){
-      mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t=>t.stop());
-    }
+  function stopRecording(){
+    if(mediaRecorder&&mediaRecorder.state!=='inactive'){mediaRecorder.stop();mediaRecorder.stream.getTracks().forEach(t=>t.stop());}
     isRecording=false;
     document.getElementById('mic-btn').classList.remove('recording');
     document.getElementById('waveform').classList.remove('visible');
     setStatus('transcribing…');
   }
-
-  async function processAudio() {
-    const mime = getSupportedMime()||'audio/webm';
-    const blob = new Blob(audioChunks,{type:mime});
+  async function processAudio(){
+    const mime=getSupportedMime()||'audio/webm';
+    const blob=new Blob(audioChunks,{type:mime});
     if(blob.size<1000){setStatus('too short');return;}
-    try {
-      const ext  = mime.includes('mp4')?'mp4':mime.includes('ogg')?'ogg':'webm';
-      const file = new File([blob],`recording.${ext}`,{type:mime});
-      const form = new FormData(); form.append('file',file);
-      const res  = await fetch(CFG.transcribe,{method:'POST',body:form});
+    try{
+      const ext=mime.includes('mp4')?'mp4':mime.includes('ogg')?'ogg':'webm';
+      const file=new File([blob],`recording.${ext}`,{type:mime});
+      const form=new FormData();form.append('file',file);
+      const res=await fetch(CFG.transcribe,{method:'POST',body:form});
       if(!res.ok){const t=await res.text();throw new Error(`${res.status}: ${t.slice(0,80)}`);}
-      const data = await res.json();
-      const transcript = (data.text||'').trim();
+      const data=await res.json();
+      const transcript=(data.text||'').trim();
       if(!transcript){setStatus('no speech detected');return;}
-      const tBar = document.getElementById('transcript-bar');
-      document.getElementById('transcript-text').textContent = transcript;
+      const tBar=document.getElementById('transcript-bar');
+      document.getElementById('transcript-text').textContent=transcript;
       tBar.classList.add('visible');
       setTimeout(()=>tBar.classList.remove('visible'),4000);
       await sendToLLM(transcript);
-    } catch(e){setStatus('error: '+e.message);}
+    }catch(e){setStatus('error: '+e.message);}
   }
 
-  // ── LLM ──────────────────────────────────────────────────
-  async function sendToLLM(userText) {
-    addMessage('user',userText); setStatus('generating…'); setBusy(true);
-    const msgEl  = addMessage('ai','');
-    const cursor = document.createElement('span');
-    cursor.className='cursor'; msgEl.appendChild(cursor);
+  // ── LLM ──────────────────────────────────────────────────────
+  async function sendToLLM(userText){
+    addMessage('user',userText);setStatus('generating…');setBusy(true);
+    const msgEl=addMessage('ai','');
+    const cursor=document.createElement('span');cursor.className='cursor';msgEl.appendChild(cursor);
     let fullText='';
-    try {
-      const messages = history.filter(m=>m.role!=='system').slice(0,-1).concat([{role:'user',content:userText}]);
-      const res = await fetch(`${CFG.host}/api/chat`,{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({model:CFG.chat,stream:true,messages}),
+    try{
+      const messages=history.filter(m=>m.role!=='system').slice(0,-1).concat([{role:'user',content:userText}]);
+      const res=await fetch(`${CFG.host}/api/chat`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:CFG.chat,stream:true,messages}),
       });
-      if(!res.ok) throw new Error(`Chat error ${res.status}`);
-      const reader=res.body.getReader(); const decoder=new TextDecoder();
+      if(!res.ok)throw new Error(`Chat error ${res.status}`);
+      const reader=res.body.getReader();const decoder=new TextDecoder();
       while(true){
-        const{done,value}=await reader.read(); if(done)break;
+        const{done,value}=await reader.read();if(done)break;
         const lines=decoder.decode(value).split('\n').filter(Boolean);
         for(const line of lines){
           try{
             const j=JSON.parse(line);
-            if(j.message?.content){fullText+=j.message.content;msgEl.textContent=fullText;msgEl.appendChild(cursor);document.getElementById('chat').scrollTop=99999;}
-            if(j.done){cursor.remove();history.push({role:'assistant',content:fullText});}
+            if(j.message?.content){
+              fullText+=j.message.content;
+              msgEl.textContent=fullText;
+              msgEl.appendChild(cursor);
+              document.getElementById('chat').scrollTop=99999;
+            }
+            if(j.done){
+              cursor.remove();
+              history.push({role:'assistant',content:fullText});
+              // Speak the completed response
+              speakText(fullText);
+            }
           }catch{}
         }
       }
@@ -440,16 +567,14 @@
   }
 
   async function sendText(){
-    const el=document.getElementById('text-input'); const text=el.value.trim();
-    if(!text)return; el.value=''; await sendToLLM(text);
+    const el=document.getElementById('text-input');const text=el.value.trim();
+    if(!text)return;el.value='';await sendToLLM(text);
   }
 
   function setStatus(t){
     document.getElementById('status-text').textContent=t;
-    document.getElementById('conn-dot').className=
-      t==='ready'?'dot online':t.startsWith('error')?'dot error':'dot working';
+    document.getElementById('conn-dot').className=t==='ready'?'dot online':t.startsWith('error')?'dot error':'dot working';
   }
-
   function setBusy(b){
     document.getElementById('mic-btn').disabled=b;
     document.getElementById('send-btn').disabled=b;

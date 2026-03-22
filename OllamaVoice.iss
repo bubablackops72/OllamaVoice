@@ -10,7 +10,7 @@ AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\OllamaVoice
+DefaultDirName={autopf64}\OllamaVoice
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
 OutputDir=.
@@ -19,6 +19,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+ArchitecturesInstallIn64BitMode=x64compatible
 SetupIconFile=ollama_icon.ico
 UninstallDisplayName=OllamaVoice
 UninstallDisplayIcon={app}\OllamaVoice.exe
@@ -51,8 +52,14 @@ Name: "{autodesktop}\OllamaVoice";     Filename: "{app}\OllamaVoice.exe"; Workin
 Name: "{userstartup}\OllamaVoice";     Filename: "{app}\OllamaVoice.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ollama_icon.ico"; Tasks: startupicon
 
 [Run]
-; Step 1 - Python packages
-Filename: "pip"; Parameters: "install faster-whisper pystray pillow --quiet"; StatusMsg: "Installing Python packages..."; Flags: runhidden waituntilterminated
+; Step 1 - Python packages (numpy must be installed as binary wheel first for Python 3.14)
+; Step 0 - Install Python 3.11 silently if not present (required for Kokoro TTS)
+Filename: "cmd.exe"; Parameters: "/c if not exist ""{localappdata}\Programs\Python\Python311\python.exe"" curl -L -o ""{tmp}\python311.exe"" https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe && ""{tmp}\python311.exe"" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0"; StatusMsg: "Installing Python 3.11 for Jarvis voice support..."; Flags: runhidden waituntilterminated
+
+; Install packages into Python 3.11 (required for Kokoro TTS / Jarvis voice)
+Filename: "{localappdata}\Programs\Python\Python311\python.exe"; Parameters: "-m pip install faster-whisper pystray pillow kokoro soundfile numpy --quiet"; StatusMsg: "Installing Python packages (Kokoro TTS included)..."; Flags: runhidden waituntilterminated
+
+
 
 ; Step 2 - Start or create Ollama container
 Filename: "cmd.exe"; Parameters: "/c docker --context default start ollama 2>nul || docker --context default run -d --gpus all --name ollama -p 11434:11434 -e OLLAMA_ORIGINS=* -e OLLAMA_KEEP_ALIVE=-1 -v ollama:/root/.ollama ollama/ollama"; StatusMsg: "Starting Ollama container..."; Flags: runhidden waituntilterminated

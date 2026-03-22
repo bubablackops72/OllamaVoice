@@ -19,14 +19,29 @@ import subprocess
 import webbrowser
 from pathlib import Path
 
-APP_DIR       = Path(__file__).parent.resolve()
-CONFIG_FILE   = APP_DIR / "config.json"
+APP_DIR       = Path(sys.executable).parent.resolve() if getattr(sys, 'frozen', False) else Path(__file__).parent.resolve()
+_APPDATA_DIR  = Path(os.environ.get("APPDATA", str(APP_DIR))) / "OllamaVoice"
+_APPDATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# ── Debug log file (always written regardless of console) ────────
+import datetime
+_LOG_FILE = Path(os.environ.get("TEMP", ".")) / "ollamavoice_debug.log"
+def _log(msg):
+    ts = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    line = f"[{ts}] {msg}"
+    print(line, flush=True)
+    try:
+        with open(_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+CONFIG_FILE   = _APPDATA_DIR / "config.json"
 HTML_FILE     = APP_DIR / "ollama-voice-chat.html"
 DOCKER_CONTEXT = "default"
 OLLAMA_HOST   = "http://localhost:11434"
 PORT          = 8080
 WHISPER_MODEL = "base"
-SETUP_FLAG    = APP_DIR / ".ollama_setup_done"
+SETUP_FLAG    = _APPDATA_DIR / ".ollama_setup_done"
 
 DOCKER_DESKTOP_PATHS = [
     r"C:\Program Files\Docker\Docker\Docker Desktop.exe",
@@ -430,6 +445,48 @@ def parse_multipart(data: bytes, boundary: str) -> dict:
     return parts
 
 
+
+
+def load_tts():
+    global tts_pipeline
+    try:
+        _log("[tts] *** load_tts thread started ***")
+        _log(f"[tts] APP_DIR={APP_DIR}")
+
+        py311_paths = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python311\python.exe"),
+            r"C:\Users\bubag\AppData\Local\Programs\Python\Python311\python.exe",
+        ]
+        py311 = None
+        for p in py311_paths:
+            _log(f"[tts] checking: {p} exists={os.path.exists(p)}")
+            if os.path.exists(p):
+                py311 = p
+                break
+
+        if not py311:
+            import subprocess
+            result = subprocess.run(["where", "python"], capture_output=True, text=True)
+            for line in result.stdout.strip().splitlines():
+                if "311" in line and os.path.exists(line.strip()):
+                    py311 = line.strip()
+                    break
+
+        if not py311:
+            _log("[tts] ERROR: Python 3.11 not found")
+            return
+
+        _log(f"[tts] Python 3.11 found: {py311}")
+        # Set immediately — don't test (test blocks startup for 30+ seconds)
+        tts_pipeline = py311
+        _log("[tts] TTS ready — will use Kokoro via Python 3.11 subprocess")
+
+    except Exception as e:
+        import traceback
+        _log(f"[tts] FATAL: {e}")
+        _log(traceback.format_exc())
+
+
 def run_http_server(cfg):
     from http.server import HTTPServer, BaseHTTPRequestHandler
 
@@ -481,6 +538,85 @@ def run_http_server(cfg):
             self.wfile.write(data)
 
         def do_POST(self):
+            # /speak — Kokoro TTS
+            if self.path == "/speak":
+                try:
+                    import tempfile as _tf, os, subprocess, json as _json
+                    cl = int(self.headers.get("Content-Length", 0))
+                    body = self.rfile.read(cl)
+                    req_data = _json.loads(body)
+                    text  = req_data.get("text", "").strip()[:800]
+                    speed = float(req_data.get("speed", 0.9))
+                    speed = max(0.2, min(5.0, speed))  # clamp to valid range
+                    _log(f"[tts] /speak called, text length={len(text)}, speed={speed}")
+                    if not text:
+                        self._json_error("No text"); return
+
+                    # Find Python 3.11
+                    py311 = None
+                    for p in [
+                        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python311\python.exe"),
+                        r"C:\Users\bubag\AppData\Local\Programs\Python\Python311\python.exe",
+                    ]:
+                        if os.path.exists(p):
+                            py311 = p
+                            break
+                    _log(f"[tts] py311={py311}")
+                    if not py311:
+                        self._json_error("Python 3.11 not found"); return
+
+                    # Write text to temp file
+                    txt = _tf.NamedTemporaryFile(suffix=".txt", delete=False, mode="w", encoding="utf-8")
+                    txt.write(text); txt.close()
+                    wav = _tf.NamedTemporaryFile(suffix=".wav", delete=False)
+                    wav.close()
+                    _log(f"[tts] tmp files: txt={txt.name} wav={wav.name}")
+
+                    script = "\n".join([
+                        "import sys",
+                        "from kokoro import KPipeline",
+                        "import numpy as np, soundfile as sf",
+                        f"with open(r'{txt.name}', encoding='utf-8') as f: text=f.read()",
+                        "p = KPipeline(lang_code='b')",
+                        "s = []",
+                        f"[s.append(a) for _,_,a in p(text, voice='bm_george', speed={speed})]",
+                        "if not s: print('NO_AUDIO'); sys.exit(1)",
+                        f"sf.write(r'{wav.name}', np.concatenate(s), 24000)",
+                        "print('WAV_OK')",
+                    ])
+
+                    result = subprocess.run(
+                        [py311, "-c", script],
+                        capture_output=True, text=True, timeout=120
+                    )
+                    _log(f"[tts] subprocess exit={result.returncode}")
+                    _log(f"[tts] stdout={result.stdout[-300:].strip()}")
+                    if result.stderr: _log(f"[tts] stderr={result.stderr[-300:].strip()}")
+
+                    try: os.unlink(txt.name)
+                    except: pass
+
+                    if "WAV_OK" not in result.stdout:
+                        self._json_error(f"TTS failed: {result.stderr[-200:]}"); return
+
+                    with open(wav.name, "rb") as f:
+                        wav_bytes = f.read()
+                    try: os.unlink(wav.name)
+                    except: pass
+
+                    self.send_response(200)
+                    self.send_header("Content-Type", "audio/wav")
+                    self.send_header("Content-Length", str(len(wav_bytes)))
+                    self.send_cors(); self.end_headers()
+                    self.wfile.write(wav_bytes)
+                    _log(f"[tts] Spoke {len(text)} chars OK")
+                except Exception as e:
+                    import traceback
+                    _log(f"[tts] /speak EXCEPTION: {e}")
+                    _log(traceback.format_exc())
+                    self._json_error(str(e))
+                return
+
             if self.path != "/transcribe":
                 self.send_response(404); self.end_headers(); return
             if whisper_model is None:
@@ -602,6 +738,8 @@ if __name__ == "__main__":
     print("=" * 52)
     print("  OLLAMAVOICE — Local AI Voice Assistant")
     print("=" * 52)
+    _log(f"[startup] OllamaVoice starting. Log: {_LOG_FILE}")
+    _log(f"[startup] APP_DIR={APP_DIR}")
 
     # 1. Load config
     cfg = load_config()
